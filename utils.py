@@ -1,4 +1,4 @@
-from IPython.display import display, HTML
+from IPython.display import display
 
 import pandas as pd
 import numpy as np
@@ -132,3 +132,30 @@ def date_value(date_strings, errors='coerce', max_year=2010):
                             format='%d-%b-%Y',
                             errors=errors)
     return result
+
+def amount_value(value_strings):
+    def transform(value_string):
+        return value_string.replace(',', '')[1:]
+    return value_strings.applymap(transform).astype(np.float64)
+
+def plot_hist_and_box_plot(original_amount, amount_transformed, y_train, feature, bins=20):
+    fig = plt.figure(figsize=(15, 4))
+    fig.add_subplot(1, 3, 1)
+    plt.hist(original_amount[feature],
+             bins=bins)
+    plt.title(f'{feature} (original)')
+    plt.xlabel('Count')
+    plt.ylabel('Amount')
+    fig.add_subplot(1, 3, 2)
+    plt.hist(amount_transformed[feature],
+             bins=bins)
+    plt.title(f'{feature} (transformed)')
+    plt.xlabel('Amount')
+    fig.add_subplot(1, 3, 3)
+    cond = (y_train=='P I F')
+    plt.boxplot([amount_transformed.loc[cond, feature],
+                 amount_transformed.loc[~cond, feature]],
+                labels=['PIF', 'CHGOFF'])
+    plt.title(f'CHGOFF rate by {feature} (transformed)')
+    plt.xlabel('MIS Status')
+    plt.ylabel('Amount')
