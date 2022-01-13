@@ -116,10 +116,10 @@ def chgoff_rate_by_feature(x_train, y_train, feature):
     tmp = tmp['CHGOFF'] / tmp.sum(axis='columns')
     return tmp
 
-def date_value(date_strings, errors='coerce', max_year=2010):
+def date_value(date_strings, errors='coerce', max_year=2000):
     def transform(date_string):
-        result = ''
-        if date_string != '':
+        result = date_string
+        if not np.isnan(date_string):
             year = int('20' + date_string[-2:])
             if year > max_year:
                 year -= 100
@@ -127,10 +127,9 @@ def date_value(date_strings, errors='coerce', max_year=2010):
             if len(result)==10:
                 result = '0' + result
         return result
-    date_strings = date_strings.apply(transform)
-    result = pd.to_datetime(date_strings,
-                            format='%d-%b-%Y',
-                            errors=errors)
+    result = date_strings.applymap(transform).apply(
+        lambda x: pd.to_datetime(x, format='%d-%b-%Y', errors=errors)
+    )
     return result
 
 def amount_value(value_strings):
@@ -144,8 +143,8 @@ def plot_hist_and_box_plot(original_amount, amount_transformed, y_train, feature
     plt.hist(original_amount[feature],
              bins=bins)
     plt.title(f'{feature} (original)')
-    plt.xlabel('Count')
-    plt.ylabel('Amount')
+    plt.xlabel('Amount')
+    plt.ylabel('Count')
     fig.add_subplot(1, 3, 2)
     plt.hist(amount_transformed[feature],
              bins=bins)
