@@ -119,7 +119,7 @@ def chgoff_rate_by_feature(x_train, y_train, feature):
 def date_value(date_strings, errors='coerce', max_year=2000):
     def transform(date_string):
         result = date_string
-        if not np.isnan(date_string):
+        if not pd.isna(date_string):
             year = int('20' + date_string[-2:])
             if year > max_year:
                 year -= 100
