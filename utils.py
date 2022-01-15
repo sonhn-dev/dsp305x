@@ -158,7 +158,7 @@ def plot_hist_and_box_plot(original_amt, transformed_amt, y_train, bins=20):
     plt.boxplot([transformed_amt[cond],
                  transformed_amt[~cond]],
                 labels=['PIF', 'CHGOFF'])
-    plt.title(f'CHGOFF rate by {feature} (transformed)')
+    plt.title(f'CHGOFF by {feature} (transformed)')
     plt.xlabel('MIS Status')
     plt.ylabel('Amount')
 
@@ -168,7 +168,7 @@ def plot_box(values, y_train):
     plt.boxplot([values[cond],
                  values[~cond]],
                 labels=['PIF', 'CHGOFF'])
-    plt.title(f'MIS_Status by {feature}')
+    plt.title(f'{feature} by MIS_Status')
 
 def maturity_date_is_between(disburse_date, term, date_from, date_to):
     month_offset = term.map(lambda x: pd.DateOffset(months=x))
