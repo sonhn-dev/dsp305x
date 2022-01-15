@@ -14,27 +14,50 @@ import matplotlib.cm as cm
 import json
 
 
-def load_data(filename, train_size=0.9, random_state=13):
+def load_dataset(filename, target, train_size=0.9, random_state=13):
+    '''
+    Load dataset
+
+    Input:
+        filename: path to csv
+        target: name of target column
+        train_size: train set size (0.0 - 1.0)
+        random_state: seed value
+
+    Return:
+        x_train, x_test, y_train, y_test: Pandas DataFrames
+    '''
+
     raw_df = pd.read_csv(filename)
-    target_col = 'MIS_Status'
-    raw_df.dropna(subset=[target_col], inplace=True)
+    raw_df.dropna(subset=[target], inplace=True)
 
     x_cols = list(raw_df.columns)
-    x_cols.remove(target_col)
+    x_cols.remove(target)
 
     x_raw = raw_df[x_cols]
-    y_raw = raw_df[target_col]
+    y_raw = raw_df[target]
 
     x_train, x_test, y_train, y_test = train_test_split(x_raw,
                                                         y_raw,
                                                         train_size=train_size,
                                                         random_state=random_state,
                                                         stratify=y_raw)
-
     return x_train, x_test, y_train, y_test
 
 
 def plot_geospartial(data, figsize, cmap='OrRd', title=None, vmin=None, vmax=None):
+    '''
+    Plot geo heat map
+
+    Input:
+        data: Pandas Series with State index value
+        figsize: Plot size
+        cmap: Color map
+        title: Plot title
+        vmin: cmap min value
+        vmax: cmap max value
+    '''
+
     cmap = cm.get_cmap(cmap)
     vmin = vmin or data.min()
     vmax = vmax or data.max()
@@ -97,6 +120,16 @@ def plot_geospartial(data, figsize, cmap='OrRd', title=None, vmin=None, vmax=Non
     plt.yticks([])
 
 def get_df_info(df):
+    '''
+    Get DataFrame info
+    
+    Input:
+        df: DataFrame
+
+    Return:
+        DataFrame with input columns infomation
+    '''
+
     df = pd.concat([df.count(axis=0).T,
                     df.isna().sum(axis=0).T,
                     df.nunique(),
@@ -104,19 +137,42 @@ def get_df_info(df):
                    axis='columns')
     df.reset_index(inplace=True)
     df.columns = ['Column', 'Count', 'Null count', 'Num unique', 'Type']
-    display(df)
+    return df
 
-def chgoff_rate_by_feature(values, y_train):
-    tmp = pd.DataFrame(y_train).pivot_table(index=values,
-                                            columns=y_train,
-                                            values='MIS_Status',
-                                            aggfunc='count')
+def target_rate_by_feature(x, y):
+    '''
+    Get target rate by feature
+    
+    Input:
+        x: Pandas Series, feature
+        y: Pandas Series, target
 
-    tmp = tmp['CHGOFF'] / tmp.sum(axis='columns')
-    tmp.name = 'CHGOFF_Rate'
-    return tmp
+    Return:
+        DataFrame
+    '''
 
-def date_value(date_strings, errors='coerce', max_year=2000):
+    result = pd.DataFrame(y).pivot_table(index=y,
+                                         columns=x,
+                                         values=y.name,
+                                         aggfunc='count')
+
+    result = result.fillna(0)
+    result = result / result.sum()
+    return result.T
+
+def date_value(df, errors='coerce', max_year=2000):
+    '''
+    Convert string to date
+
+    Input:
+        df: Pandas DataFrame
+        error: How to deal with error (coerce, raise)
+        max_year: Maximum year (to deal with Y2K problem)
+
+    Return:
+        Pandas DataFrame
+    '''
+
     def transform(date_string):
         result = date_string
         if not pd.isna(date_string):
@@ -127,77 +183,135 @@ def date_value(date_strings, errors='coerce', max_year=2000):
             if len(result)==10:
                 result = '0' + result
         return result
-    result = date_strings.applymap(transform).apply(
+    result = df.applymap(transform).apply(
         lambda x: pd.to_datetime(x, format='%d-%b-%Y', errors=errors)
     )
     return result
 
-def amount_value(value_strings):
+def amount_value(df):
+    '''
+    Convert string to amount
+
+    Input:
+        df: Pandas DataFrame
+
+    Return:
+        Pandas DataFrame
+    '''
+
     def transform(value_string):
         return value_string.replace(',', '')[1:]
-    return value_strings.applymap(transform).astype(np.float64)
+    return df.applymap(transform).astype(np.float64)
 
-def plot_hist_and_box_plot(original_amt, transformed_amt, y_train, bins=20):
-    feature = original_amt.name
-    
+def plot_hist_and_boxplot(x, x_transformed, y, target_labels, bins=20):
+    '''
+    Plot histogram and boxplot of continuos variable
+
+    Input:
+        x: Pandas Series, original
+        x_transformed: Pandas Series, transform
+        y: Pandas Series, target
+        target_labels: List of target labels
+        bins: Number of histogram bins
+    '''
+
+    feature_name = x.name
+
     fig = plt.figure(figsize=(15, 4))
 
     fig.add_subplot(1, 3, 1)
-    plt.hist(original_amt, bins=bins)
-    plt.title(f'{feature} (original)')
-    plt.xlabel('Amount')
+    plt.hist(x, bins=bins)
+    plt.title(f'{feature_name} (original)')
+    plt.xlabel(f'{feature_name}')
     plt.ylabel('Count')
 
     fig.add_subplot(1, 3, 2)
-    plt.hist(transformed_amt, bins=bins)
-    plt.title(f'{feature} (transformed)')
-    plt.xlabel('Amount')
+    plt.hist(x_transformed, bins=bins)
+    plt.title(f'{feature_name} (transformed)')
+    plt.xlabel(f'{feature_name}')
 
     fig.add_subplot(1, 3, 3)
-    cond = (y_train=='P I F')
-    plt.boxplot([transformed_amt[cond],
-                 transformed_amt[~cond]],
-                labels=['PIF', 'CHGOFF'])
-    plt.title(f'CHGOFF by {feature} (transformed)')
-    plt.xlabel('MIS Status')
+    plt.boxplot([x_transformed[y==label] for label in target_labels],
+                labels=target_labels)
+    plt.title(f'{feature_name} (transformed) by {y.name}')
+    plt.xlabel(y.name)
     plt.ylabel('Amount')
 
-def plot_box(values, y_train):
-    feature = values.name
-    cond = (y_train=='P I F')
-    plt.boxplot([values[cond],
-                 values[~cond]],
-                labels=['PIF', 'CHGOFF'])
-    plt.title(f'{feature} by MIS_Status')
+def plot_box(x, y, target_labels):
+    '''
+    Plot boxplot of continuos variable
 
-def maturity_date_is_between(disburse_date, term, date_from, date_to):
+    Input:
+        x: Pandas Series, feature
+        y: Pandas Series, target
+        target_labels: List of target labels
+    '''
+
+    [x[y==label] for label in target_labels]
+    plt.boxplot([x[y==label] for label in target_labels],
+                labels=target_labels)
+    plt.title(f'{x.name} by {y.name}')
+    plt.xlabel(f'{y.name}')
+    plt.ylabel(f'{x.name}')
+
+def mature_between(disburse_date, term, date_from, date_to):
+    '''
+    Get maturity dates from disbursement dates and terms
+
+    Input:
+        disburse_date: Pandas Series, disbursement date
+        term: Pandas Series, term
+        date_from: String, mature from this date
+        date_to: String, mature to this date
+    Return:
+        Pandas Series with True for maturity date between date_from, date_to 
+    '''
+
     month_offset = term.map(lambda x: pd.DateOffset(months=x))
     maturity_date = disburse_date + month_offset
     cond = ((maturity_date <= np.datetime64(date_to)) &
             (maturity_date >= np.datetime64(date_from)))
     return cond
 
-def plot_stacked_bars(counts, margin=0.5, width=0.4):
-    def draw_amt(data, bottom=None):
-        for i, val in enumerate(data):
-            y = val/2
-            if bottom is not None:
-                y += bottom[i]
-            plt.text(x[i], y, f'{val:.2f}', va='center', ha='center')
-    x = counts.columns
-    mis_status_1 = counts.iloc[0, :]
-    mis_status_2 = counts.iloc[1, :]
-    plt.bar(x, mis_status_1, width=width)
-    draw_amt(mis_status_1)
-    plt.bar(x, mis_status_2, width=width, bottom=mis_status_1)
-    draw_amt(mis_status_2, bottom=mis_status_1)
+def plot_stacked_bars(counts):
+    '''
+    Plot stacked bars with heights add up to 1
+
+    Input:
+        counts: Pandas DataFrame
+    '''
+
+    def draw_amt(x, y, bottom):
+        for i, val in enumerate(y):
+            plt.text(x[i],
+                     val/2 + bottom[i],
+                     f'{val:.2f}',
+                     va='center',
+                     ha='center')
+
+    x = np.arange(counts.shape[1])
+    width = 0.4
+    bottom = np.zeros_like(x, dtype=np.float64)
+    for _, y in counts.iterrows():
+        plt.bar(x, y, width=width, bottom=bottom)
+        draw_amt(x, y, bottom)
+        bottom += y
+
     plt.xlabel(counts.columns.name)
-    plt.xticks(x, x)
+    plt.ylabel(counts.index.name)
+    plt.xticks(x, counts.columns)
     plt.title(f'{counts.index.name} by {counts.columns.name}')
     plt.legend(counts.index, loc='upper right')
     plt.margins(x=0.5)
 
-def find_clusters(model, data, feature):
+def find_clusters(model, data):
+    ''' Plot stacked bars with heights add up to 1
+
+    Input:
+        model: Sklearn cluster model
+        data: Pandas Series
+    '''
+
     x = data.to_numpy().reshape(-1, 1)
     y = model.fit_predict(x)
     tmp = pd.concat([
@@ -205,9 +319,9 @@ def find_clusters(model, data, feature):
         pd.Series(y, index=data.index, name='Cluster')
     ], axis='columns')
     tmp = tmp.reset_index()
-    tmp = tmp.groupby('Cluster', as_index=False).agg({'CHGOFF_Rate': 'max',
-                                                      feature: lambda x: x.to_list()})
-    tmp = tmp.sort_values('CHGOFF_Rate')
+    tmp = tmp.groupby('Cluster', as_index=False).agg({data.name: 'max',
+                                                      data.index.name: lambda x: x.to_list()})
+    tmp = tmp.sort_values(data.name)
     tmp = tmp.reset_index(drop=True)
     tmp = tmp.drop(columns='Cluster')
     return tmp.to_dict(orient='index')
