@@ -295,7 +295,7 @@ def plot_stacked_bars(counts):
     for _, y in counts.iterrows():
         plt.bar(x, y, width=width, bottom=bottom)
         draw_amt(x, y, bottom)
-        bottom += y
+        bottom += y.to_numpy()
 
     plt.xlabel(counts.columns.name)
     plt.ylabel(counts.index.name)
