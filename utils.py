@@ -12,6 +12,7 @@ from matplotlib.colors import Normalize
 import matplotlib.cm as cm
 
 import json
+import requests
 
 
 def load_dataset(filename, target, train_size=0.9, random_state=13):
@@ -305,11 +306,13 @@ def plot_stacked_bars(counts):
     plt.margins(x=0.5)
 
 def find_clusters(model, data):
-    ''' Plot stacked bars with heights add up to 1
+    ''' Cluster data to group
 
     Input:
         model: Sklearn cluster model
         data: Pandas Series
+    Return:
+        Dictionary 
     '''
 
     x = data.to_numpy().reshape(-1, 1)
@@ -325,3 +328,19 @@ def find_clusters(model, data):
     tmp = tmp.reset_index(drop=True)
     tmp = tmp.drop(columns='Cluster')
     return tmp.to_dict(orient='index')
+
+def zip_to_state(zips, apikey):
+    ''' Get States from Zip codes
+
+    Input:
+        zips: Zip codes
+        apikey: REST API key
+    '''
+    zips = ','.join([str(z) for z in zips])
+    response = requests.get(r'https://app.zipcodebase.com/api/v1/search',
+                            params={'codes': zips, 'country': 'US'},
+                            headers={'apikey': apikey})
+    print('API request:', response.url)
+    data = response.json()['results']
+    result = {int(z): info[0]['state_code']for z, info in data.items()}
+    return result
