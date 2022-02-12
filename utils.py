@@ -14,38 +14,6 @@ import matplotlib.cm as cm
 import json
 import requests
 
-
-def load_dataset(filename, target, train_size=0.9, random_state=13):
-    '''
-    Load dataset
-
-    Input:
-        filename: path to csv
-        target: name of target column
-        train_size: train set size (0.0 - 1.0)
-        random_state: seed value
-
-    Return:
-        x_train, x_test, y_train, y_test: Pandas DataFrames
-    '''
-
-    raw_df = pd.read_csv(filename)
-    raw_df.dropna(subset=[target], inplace=True)
-
-    x_cols = list(raw_df.columns)
-    x_cols.remove(target)
-
-    x_raw = raw_df[x_cols]
-    y_raw = raw_df[target]
-
-    x_train, x_test, y_train, y_test = train_test_split(x_raw,
-                                                        y_raw,
-                                                        train_size=train_size,
-                                                        random_state=random_state,
-                                                        stratify=y_raw)
-    return x_train, x_test, y_train, y_test
-
-
 def plot_geospartial(data, figsize, cmap='OrRd', title=None, vmin=None, vmax=None):
     '''
     Plot geo heat map
@@ -344,3 +312,22 @@ def zip_to_state(zips, apikey):
     data = response.json()['results']
     result = {int(z): info[0]['state_code']for z, info in data.items()}
     return result
+
+def in_recession(disburse_date, term, date_from, date_to):
+    '''
+    Get maturity dates from disbursement dates and terms
+
+    Input:
+        disburse_date: Pandas Series, disbursement date
+        term: Pandas Series, term
+        date_from: String, mature from this date
+        date_to: String, mature to this date
+    Return:
+        Pandas Series with True for maturity date between date_from, date_to 
+    '''
+
+    month_offset = term.map(lambda x: pd.DateOffset(months=x))
+    maturity_date = disburse_date + month_offset
+    cond = ((disburse_date <= np.datetime64(date_to)) &
+            (maturity_date >= np.datetime64(date_from)))
+    return cond
