@@ -5,6 +5,7 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import chi2
+from sklearn.metrics import auc
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
@@ -317,3 +318,27 @@ def mature_between(disburse_date, term, date_from, date_to):
 def chi2_test(x, y):
     c2, p = chi2(x, y)
     print('Chi square:', c2[0], 'p-value:', p[0])
+
+def state_imputer(x, zip_mapping):
+    states = x['State'].copy()
+    cond = states.isna()
+    states[cond] = x.loc[cond, 'Zip'].replace(zip_mapping)
+    cond = states.isin([0, ''])
+    states[cond] = x.loc[cond, 'City'].str.slice(-2)
+    return states
+
+def plot_auc(precision, recall, y):
+    no_skill = len(y[y==1]) / len(y)
+    plt.figure(figsize=(8, 8))
+    plt.plot(recall, precision, marker='.')
+    plt.plot([0.0, 1.0], [no_skill, no_skill], '--')
+    plt.xlim(-0.1, 1.1)
+    plt.ylim(-0.1, 1.1)
+    ticks = np.arange(0.0, 1.1, 0.1)
+    plt.xticks(ticks)
+    plt.yticks(ticks)
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title(f'Precision-Recall curve AUC = %f' % auc(recall, precision))
+    ax = plt.gca()
+    ax.set_aspect('equal')
