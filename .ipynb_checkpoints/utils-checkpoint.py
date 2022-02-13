@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 
 from sklearn.model_selection import train_test_split
+from sklearn.feature_selection import chi2
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
@@ -223,25 +224,6 @@ def plot_box(x, y, target_labels):
     plt.xlabel(f'{y.name}')
     plt.ylabel(f'{x.name}')
 
-def mature_between(disburse_date, term, date_from, date_to):
-    '''
-    Get maturity dates from disbursement dates and terms
-
-    Input:
-        disburse_date: Pandas Series, disbursement date
-        term: Pandas Series, term
-        date_from: String, mature from this date
-        date_to: String, mature to this date
-    Return:
-        Pandas Series with True for maturity date between date_from, date_to 
-    '''
-
-    month_offset = term.map(lambda x: pd.DateOffset(months=x))
-    maturity_date = disburse_date + month_offset
-    cond = ((maturity_date <= np.datetime64(date_to)) &
-            (maturity_date >= np.datetime64(date_from)))
-    return cond
-
 def plot_stacked_bars(counts):
     '''
     Plot stacked bars with heights add up to 1
@@ -313,7 +295,7 @@ def zip_to_state(zips, apikey):
     result = {int(z): info[0]['state_code']for z, info in data.items()}
     return result
 
-def in_recession(disburse_date, term, date_from, date_to):
+def mature_between(disburse_date, term, date_from, date_to):
     '''
     Get maturity dates from disbursement dates and terms
 
@@ -328,6 +310,10 @@ def in_recession(disburse_date, term, date_from, date_to):
 
     month_offset = term.map(lambda x: pd.DateOffset(months=x))
     maturity_date = disburse_date + month_offset
-    cond = ((disburse_date <= np.datetime64(date_to)) &
+    cond = ((maturity_date <= np.datetime64(date_to)) &
             (maturity_date >= np.datetime64(date_from)))
     return cond
+
+def chi2_test(x, y):
+    c2, p = chi2(x, y)
+    print('Chi square:', c2[0], 'p-value:', p[0])
