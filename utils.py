@@ -324,13 +324,11 @@ def state_imputer(x, zip_mapping):
     cond = states.isna()
     states[cond] = x.loc[cond, 'Zip'].replace(zip_mapping)
     cond = states.isin([0, ''])
-    states[cond] = x.loc[cond, 'City'].str.slice(-2)
+    states[cond] = 'UNK'
     return states
 
-def plot_auc(precision, recall, y, label):
-    #no_skill = len(y[y==1]) / len(y)
+def plot_auc(precision, recall, label):
     plt.plot(recall, precision, marker='.', label=label)
-    #plt.plot([0.0, 1.0], [no_skill, no_skill], '--')
     plt.xlim(-0.1, 1.1)
     plt.ylim(-0.1, 1.1)
     ticks = np.arange(0.0, 1.1, 0.1)
@@ -338,6 +336,3 @@ def plot_auc(precision, recall, y, label):
     plt.yticks(ticks)
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    #plt.title(f'Precision-Recall curve AUC = %f' % auc(recall, precision))
-    #ax = plt.gca()
-    #ax.set_aspect('equal')
