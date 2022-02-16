@@ -290,7 +290,8 @@ def zip_to_state(zips, apikey):
     zips = ','.join([str(z) for z in zips])
     response = requests.get(r'https://app.zipcodebase.com/api/v1/search',
                             params={'codes': zips, 'country': 'US'},
-                            headers={'apikey': apikey})
+                            headers={'apikey': apikey},
+                            verify=False)
     print('API request:', response.url)
     data = response.json()['results']
     result = {int(z): info[0]['state_code']for z, info in data.items()}
